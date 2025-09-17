@@ -211,37 +211,21 @@ exports.ExposeStore = () => {
      * @param {Function} callback Modified function
      */
     window.injectToFunction = (target, callback) => {
-        try {
-            let module = window.require(target.module);
-            if (!module) return; 
-
-            const path = target.function.split('.');
-            const funcName = path.pop();
-
-            for (const key of path) {
-                if (!module[key]) return;
-                module = module[key];
-            }
-
-            const originalFunction = module[funcName];
-            if (typeof originalFunction !== 'function') return;
-
-            module[funcName] = (...args) => {
-                try {
-                    return callback(originalFunction, ...args);
-                } catch {
-                    return originalFunction(...args);
-                }
-            };
-
-        } catch {
-            return;
+        let module = window.require(target.module);
+        if (!module) return;
+        
+        const path = target.function.split('.');
+        const funcName = path.pop();
+        for (const key of path) {
+            module = module[key];
         }
+        const originalFunction = module[funcName];
+        module[funcName] = (...args) => callback(originalFunction, ...args);
     };
 
     window.injectToFunction({ module: 'WAWebBackendJobsCommon', function: 'mediaTypeFromProtobuf' }, (func, ...args) => { const [proto] = args; return proto.locationMessage ? null : func(...args); });
 
     window.injectToFunction({ module: 'WAWebE2EProtoUtils', function: 'typeAttributeFromProtobuf' }, (func, ...args) => { const [proto] = args; return proto.locationMessage || proto.groupInviteMessage ? 'text' : func(...args); });
 
-    window.injectToFunction({ module: 'WAWebLid1X1MigrationGating', function: 'Lid1X1MigrationUtils.isLidMigrated' }, () => false);
+    window.injectToFunction({ module: 'WAWebLid1X1MigrationGating', function: 'Lid1X1MigrationUtils.isLidMigrated' }, (func, ...args) => { try { return func(...args); } catch { return false; }});
 };
